@@ -1,0 +1,2 @@
+# screw-ai
+School project
