@@ -83,6 +83,8 @@ def train(neuron, input, target):
     print(neuron)
 
 
+
+
 dataSet = [
     [363, 198, 1],
     [343, 255, 1],
