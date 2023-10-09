@@ -1,7 +1,7 @@
 import cv2 as cv
 from PIL import Image
 
-def calibrateCamera(eichWert):
+def calibrateCamera(sizeEichObjectMM):
     image = Image.open(imageCapture(device=1))
     # initialize
     threshold = 80
@@ -41,7 +41,9 @@ def calibrateCamera(eichWert):
     y = ymax-ymin
     if x < y:
       x,y = y,x
-    print(x/eichWert, y/eichWert)
+    print(x/sizeEichObjectMM)
+    eichWert = x/sizeEichObjectMM
+    return eichWert
 
 def imageCapture(device = 0, fileName = "frame"):
     import cv2 as cv
