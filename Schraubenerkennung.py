@@ -4,6 +4,9 @@ import cv2 as cv
 import json
 import os
 
+def cls(): #clear the console
+    os.system('cls' if os.name=='nt' else 'clear')
+
 def saveTrainData(trainData = [], file = "data.json"):
     if not os.path.isfile(file):
         print("data.json does not exsits")
@@ -25,35 +28,38 @@ def loadTrainData(file = "data.json"):
 
 def imageCapture(device = 0, file_name = "frame"):
     cam = cv.VideoCapture(device)
-    cv.namedWindow("Bild Aufnahme")
+    cv.namedWindow("Capture Picture")
     capture_process = True
     while capture_process:
         ret, frame = cam.read()
         if not ret:
             print("failed to grab frame")
             capture_process = False
-        cv.imshow("Bild Aufnahme", frame)
+        cv.imshow("Capture Picture", frame)
         k = cv.waitKey(1)
         if k%256 == 27:
             # ESC pressed
-            print("Escape gedrückt, schließt...")
+            print("Escape pressed, closing...")
             capture_process = False
-        elif k%256 == 32:
-            # SPACE pressed
+        elif k%256 == 13:
+            # Enter pressed
             img_name = f"{file_name}.png"
             cv.imwrite(img_name, frame)
-            print("{} written!".format(img_name))
-            print("Spacebar was pressed, Image captured ...")
+            print("Enter was pressed, Image captured ...")
             capture_process = False
     cam.release()
     cv.destroyAllWindows()
     return f"{file_name}.png"
 
 def calibrateCamera(sizeEichObjectMM):
+    print("""1. Create a white Background (for instance a peace of paper)\n
+          2. Put a 5 cent coin underneath the Camera\n
+          3. Press Enter to capture the Image!""")
     image = Image.open(imageCapture(device=1))
     x = recognisation(image, 1)[1]
     print(x/sizeEichObjectMM)
     eichWert = sizeEichObjectMM/x
+    print("Don't move the camera!")
     return eichWert
 
 def eichen(boundingBox, eichWert):
@@ -63,11 +69,13 @@ def eichen(boundingBox, eichWert):
 
 def object_collection(eichWert, amount_to_train):
     for i in range(amount_to_train):
+        print(f"Capture {i}. image")
         print("Press Space to capture the Image!")
         image = Image.open(imageCapture(device=1))
         objects.append(recognisation(image, eichWert)[0])
         target = input("Enter 1 for long or 0 for short: " )
         targets.append(int(target))
+        cls()
     return objects, targets
 
 
@@ -132,6 +140,7 @@ def learning(neuron, objects, targets, learning_rate):
         train(neuron, objects[index], targets[index])
 
 def trainingProcess(eichWert, learning_rate, amount_to_train):
+    print(f"Try to use {amount_to_train//2} Picture's for the long Object and\n {amount_to_train-(amount_to_train//2)} Picture's for the short Object")
     objects, targets = object_collection(eichWert, amount_to_train)
     neuron = create(2)
     learning(neuron, objects, targets, learning_rate)
@@ -139,22 +148,54 @@ def trainingProcess(eichWert, learning_rate, amount_to_train):
 
 def recognisationProcess(neuron= [], amount_to_measure=1, eichWert=1):
     for x in range(amount_to_measure):
-        print("Put a screw under cam, to be measured!")
+        print(f"{x}. Recognison")
+        print("Put a Object under the cam, to be measured!")
         screwType = output(neuron, recognisation(Image.open(imageCapture(device=1)), eichWert)[0])
         if screwType == 0:
-            print("Die Schraube ist kurz")
+            print("The Object is short")
         else:
-            print("Die Schraube ist lang")
+            print("The Object is long")
+        cls()
 
 def main():
+    cls()
+    user_continue = True
+    unused = input(menu["Introduction"])
+    cls()
     eichWert = calibrateCamera(sizeEichObjectMM=21)
-
-    #trainingProcess(eichWert, 10000000, 20)
-
-    neuron = loadTrainData()
-    recognisationProcess(neuron, 5, eichWert)
+    while user_continue:
+        cls()
+        user_process_selection = input(menu["Main-Menu"]).strip()
+        cls()
+        if user_process_selection == "1": #Training
+            user_amount_to_train = int(input("How many Object's do you want to use for training (Recommended 20 or more):"))
+            trainingProcess(eichWert, 10000000, user_amount_to_train)
+        elif user_process_selection == "2": #Recognison
+            neuron = loadTrainData()
+            recognisationProcess(neuron, 5, eichWert)
+        elif user_process_selection == "3": #Calibrate
+            eichWert = calibrateCamera(sizeEichObjectMM=21)
+        else:
+            print("Your Choice was not in the Menu range from 1 to 3!")
+        user_continue = input("Do you want to close the Programm?(Y/N)")
+        if user_continue.lower() in ["y","yes"]:
+            user_continue = False
+        else:
+            user_continue = True
 
 if __name__ == "__main__":
     objects = []
     targets = []
+    menu = {"Introduction": 
+            '''####Welcome to the Size detector###\n
+            1. Connect a Cam to your Computer  \n
+            2. Point the Cam towards a white Backround\n
+            3. You need to run the Cam calibration\n
+            Press Enter to continue: ''',
+            "Main-Menu": """###### Main Menu ######\n
+              1. Train the detection-model\n
+              2. Recognise Objectsize\n
+              3. Calibrate Cam (Recommende if the cam was moved!)\n
+              What do you want to do (answer with the Menu number): 
+              """,}
     main()
