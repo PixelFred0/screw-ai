@@ -9,7 +9,7 @@ def cls(): #clear the console
 
 def saveTrainData(trainData = [], file = "data.json"):
     if not os.path.isfile(file):
-        print("data.json does not exsits")
+        print("data.json was created!")
         with open('data.json', 'x') as f:
             data = {}
             json.dump(data, f, indent=4)
@@ -21,10 +21,14 @@ def saveTrainData(trainData = [], file = "data.json"):
         f.truncate()
 
 def loadTrainData(file = "data.json"):
-    with open(file) as f:
-        data = json.load(f)
-        fileTrainData = data["trainData"]
-    return fileTrainData
+    try:
+        with open(file) as f:
+            data = json.load(f)
+            fileTrainData = data["trainData"]
+        return fileTrainData
+    except FileNotFoundError:
+        print("There is no data.json file  with your Training Data in the directory!")
+        return False
 
 def imageCapture(device = 0, file_name = "frame"):
     cam = cv.VideoCapture(device)
@@ -52,7 +56,8 @@ def imageCapture(device = 0, file_name = "frame"):
     return f"{file_name}.png"
 
 def calibrateCamera(sizeEichObjectMM):
-    print("""1. Create a white Background (for instance a peace of paper)\n
+    print("""### Cam Calibration ###\n
+          1. Create a white Background (for instance a peace of paper)\n
           2. Put a 5 cent coin underneath the Camera\n
           3. Press Enter to capture the Image!""")
     image = Image.open(imageCapture(device=1))
@@ -69,8 +74,8 @@ def eichen(boundingBox, eichWert):
 
 def object_collection(eichWert, amount_to_train):
     for i in range(amount_to_train):
-        print(f"Capture {i}. image")
-        print("Press Space to capture the Image!")
+        print(f"Capture {i+1}. image")
+        print("Press Enter to capture the Image!")
         image = Image.open(imageCapture(device=1))
         objects.append(recognisation(image, eichWert)[0])
         target = input("Enter 1 for long or 0 for short: " )
@@ -143,18 +148,20 @@ def trainingProcess(eichWert, learning_rate, amount_to_train):
     print(f"Try to use {amount_to_train//2} Picture's for the long Object and\n {amount_to_train-(amount_to_train//2)} Picture's for the short Object")
     objects, targets = object_collection(eichWert, amount_to_train)
     neuron = create(2)
+    print("Training Process is running, please wait ...")
     learning(neuron, objects, targets, learning_rate)
     saveTrainData(trainData=neuron)
 
 def recognisationProcess(neuron= [], amount_to_measure=1, eichWert=1):
     for x in range(amount_to_measure):
-        print(f"{x}. Recognison")
+        print(f"{x+1}. Recognition")
         print("Put a Object under the cam, to be measured!")
         screwType = output(neuron, recognisation(Image.open(imageCapture(device=1)), eichWert)[0])
         if screwType == 0:
             print("The Object is short")
         else:
             print("The Object is long")
+        unused = input("Do you want to continue? ")
         cls()
 
 def main():
@@ -162,7 +169,7 @@ def main():
     user_continue = True
     unused = input(menu["Introduction"])
     cls()
-    eichWert = calibrateCamera(sizeEichObjectMM=21)
+    eichWert = calibrateCamera(sizeEichObjectMM=23)
     while user_continue:
         cls()
         user_process_selection = input(menu["Main-Menu"]).strip()
@@ -172,9 +179,11 @@ def main():
             trainingProcess(eichWert, 10000000, user_amount_to_train)
         elif user_process_selection == "2": #Recognison
             neuron = loadTrainData()
-            recognisationProcess(neuron, 5, eichWert)
+            if neuron:
+                user_amount_objects = int(input("How many Objects do you want to recognise?: "))
+                recognisationProcess(neuron, user_amount_objects, eichWert)
         elif user_process_selection == "3": #Calibrate
-            eichWert = calibrateCamera(sizeEichObjectMM=21)
+            eichWert = calibrateCamera(sizeEichObjectMM=23)
         else:
             print("Your Choice was not in the Menu range from 1 to 3!")
         user_continue = input("Do you want to close the Programm?(Y/N)")
@@ -187,7 +196,7 @@ if __name__ == "__main__":
     objects = []
     targets = []
     menu = {"Introduction": 
-            '''####Welcome to the Size detector###\n
+            '''#### Welcome to the Size detector ###\n
             1. Connect a Cam to your Computer  \n
             2. Point the Cam towards a white Backround\n
             3. You need to run the Cam calibration\n
